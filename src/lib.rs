@@ -1,5 +1,3 @@
-use rand::{Rng, thread_rng};
-
 #[repr(C)]
 #[derive(Clone, Eq, PartialEq)]
 struct Pos {
@@ -67,8 +65,9 @@ pub extern fn random_pod(robot_tasks: *const Pos, robot_count: i32, task_queue: 
         .collect();
 
     // Select a random pod from our filtered list
-    let mut rng = thread_rng();
-    let random_pod = &available_pods[rng.gen_range(0..available_pods.len())];
+    //let mut rng = thread_rng();
+    // TODO: Generate random pod
+    let random_pod = &available_pods[0];
 
     result[0].x = random_pod.x;
     result[0].y = random_pod.y;
