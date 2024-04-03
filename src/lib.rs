@@ -58,16 +58,19 @@ fn available_moves(pos: &Pos, target_pos: &Pos, is_carrying: bool) -> Vec<Pos> {
         pos.y == target_pos.y
     };
 
-    use HighwayState::*;
     if is_carrying && is_in_pod_row {
         // When the robot just picked up a pod and is still in the pod location
         vec![pos.down()]
-    } else if is_carrying && is_below_pod_row && pos.x == target_pos.x && pos.y == target_pos.y + 1 {
+    } else if is_carrying && is_below_pod_row && pos.x == target_pos.x && pos.y == target_pos.y + 1
+    {
         // When returning a pod and below where pod should go
         vec![pos.up(), pos.right()]
     } else if let Some(highway_state) = highway_state(pos) {
+        use HighwayState::*;
         match highway_state {
-            LeftLane if pos.y == target_pos.y && target_pos.x > pos.x => vec![pos.down(), pos.left()],
+            LeftLane if pos.y == target_pos.y && target_pos.x > pos.x => {
+                vec![pos.down(), pos.left()]
+            }
             LeftLane if is_in_correct_row => vec![pos.left(), pos.down()],
             LeftLane if pos.y == 9 => vec![pos.right()],
             LeftLane if pos.y > target_pos.y => vec![pos.right(), pos.down()],
@@ -96,8 +99,16 @@ fn available_moves(pos: &Pos, target_pos: &Pos, is_carrying: bool) -> Vec<Pos> {
 }
 
 #[no_mangle]
-pub extern fn available_moves_u(pos: Pos, target_pos: Pos, is_carrying: bool, result: &mut [Pos; 3]) {
-    let moves = available_moves(&pos, &target_pos, is_carrying);
+pub extern "C" fn available_moves_u(
+    pos: Pos,
+    target_pos: Pos,
+    is_carrying: bool,
+    result: &mut [Pos; 3],
+) {
+    let moves: Vec<Pos> = available_moves(&pos, &target_pos, is_carrying)
+        .into_iter()
+        .filter(|p| (0..10).contains(&p.x) && (0..10).contains(&p.y))
+        .collect();
 
     for i in 0..3 {
         result[i] = moves.get(i).map(Pos::clone).unwrap_or(Pos::new(-1, -1));
