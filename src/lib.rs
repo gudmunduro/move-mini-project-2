@@ -1,3 +1,5 @@
+use rand::{Rng, thread_rng};
+
 #[repr(C)]
 #[derive(Clone, Eq, PartialEq)]
 struct Pos {
@@ -33,9 +35,29 @@ enum HighwayState {
 }
 
 #[no_mangle]
+pub extern fn select_pod(robot_tasks: *const Pos, robot_count: i32, task_queue: *const Pos, task_queue_length: i32, task_queue_start: i32, task_queue_end: i32, pod_index: i32, result: &mut [Pos; 1]) {
+    let available_pods = available_pods(robot_tasks, robot_count, task_queue, task_queue_length, task_queue_start, task_queue_end);
+    let pod = &available_pods[pod_index as usize];
+
+    result[0].x = pod.x;
+    result[0].y = pod.y;
+}
+
+#[no_mangle]
 pub extern fn random_pod(robot_tasks: *const Pos, robot_count: i32, task_queue: *const Pos, task_queue_length: i32, task_queue_start: i32, task_queue_end: i32, result: &mut [Pos; 1]) {
+    let available_pods = available_pods(robot_tasks, robot_count, task_queue, task_queue_length, task_queue_start, task_queue_end);
+
+    // Select a random pod from our filtered list
+    let mut rng = thread_rng();
+    let random_pod = &available_pods[rng.gen_range(0..available_pods.len())];
+
+    result[0].x = random_pod.x;
+    result[0].y = random_pod.y;
+}
+
+fn available_pods(robot_tasks: *const Pos, robot_count: i32, task_queue: *const Pos, task_queue_length: i32, task_queue_start: i32, task_queue_end: i32) -> Vec<Pos> {
     let robot_tasks = unsafe {
-      std::slice::from_raw_parts(robot_tasks, robot_count as usize)
+        std::slice::from_raw_parts(robot_tasks, robot_count as usize)
     };
     let task_queue = unsafe {
         std::slice::from_raw_parts(task_queue, task_queue_length as usize)
@@ -59,18 +81,10 @@ pub extern fn random_pod(robot_tasks: *const Pos, robot_count: i32, task_queue: 
         .collect();
 
     // Get all pods except for those already in the queue or assigned to a robot
-    let available_pods: Vec<_> = all_pods()
+    all_pods()
         .into_iter()
         .filter(|p| !robot_tasks.contains(&p) && !queue_tasks.contains(&p))
-        .collect();
-
-    // Select a random pod from our filtered list
-    //let mut rng = thread_rng();
-    // TODO: Generate random pod
-    let random_pod = &available_pods[0];
-
-    result[0].x = random_pod.x;
-    result[0].y = random_pod.y;
+        .collect()
 }
 
 #[no_mangle]
@@ -128,7 +142,7 @@ fn available_moves(pos: &Pos, target_pos: &Pos, is_carrying: bool) -> Vec<Pos> {
             vec![pos.left(), pos.up(), pos.down()]
         }
     } else if pos.x < target_pos.x {
-        vec![pos.right()]
+        vec![pos.right(), pos.down()]
     } else {
         vec![pos.clone()]
     }
